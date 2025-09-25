@@ -17,10 +17,25 @@ function Index() {
     pipeDiameter: ''
   });
 
+  const [radiatorData, setRadiatorData] = useState({
+    roomArea: '',
+    ceilingHeight: '',
+    wallCount: '',
+    windowCount: '',
+    doorCount: '',
+    insulationLevel: 'medium'
+  });
+
   const [results, setResults] = useState({
     totalPipeLength: 0,
     recommendedDiameter: 0,
     materialCost: 0
+  });
+
+  const [radiatorResults, setRadiatorResults] = useState({
+    radiatorCount: 0,
+    totalPower: 0,
+    radiatorCost: 0
   });
 
   const calculateMaterials = () => {
@@ -37,6 +52,50 @@ function Index() {
       totalPipeLength: Math.round(totalLength),
       recommendedDiameter: diameter,
       materialCost: Math.round(cost)
+    });
+  };
+
+  const calculateRadiators = () => {
+    const area = parseFloat(radiatorData.roomArea) || 0;
+    const height = parseFloat(radiatorData.ceilingHeight) || 2.7;
+    const walls = parseFloat(radiatorData.wallCount) || 4;
+    const windows = parseFloat(radiatorData.windowCount) || 1;
+    const doors = parseFloat(radiatorData.doorCount) || 1;
+    
+    // Базовый расчет мощности (100 Вт на м²)
+    let basePower = area * 100;
+    
+    // Коррекция по высоте потолков
+    if (height > 3) basePower *= 1.2;
+    else if (height < 2.5) basePower *= 0.9;
+    
+    // Коррекция по количеству внешних стен
+    if (walls >= 3) basePower *= 1.3;
+    else if (walls === 2) basePower *= 1.2;
+    
+    // Коррекция по окнам и дверям
+    basePower += windows * 100; // +100 Вт на окно
+    basePower += doors * 200; // +200 Вт на дверь
+    
+    // Коррекция по утеплению
+    const insulationMultiplier = {
+      'poor': 1.3,
+      'medium': 1.0,
+      'good': 0.8
+    };
+    basePower *= insulationMultiplier[radiatorData.insulationLevel as keyof typeof insulationMultiplier] || 1.0;
+    
+    // Расчет количества секций (одна секция = 150-200 Вт)
+    const radiatorPower = 170; // средняя мощность секции
+    const radiatorCount = Math.ceil(basePower / radiatorPower);
+    
+    // Стоимость (примерная цена секции 2500 руб)
+    const cost = radiatorCount * 2500;
+    
+    setRadiatorResults({
+      radiatorCount,
+      totalPower: Math.round(basePower),
+      radiatorCost: cost
     });
   };
 
@@ -120,17 +179,19 @@ function Index() {
               </div>
             </div>
 
-            {/* Calculator Card */}
-            <Card className="animate-scale-in">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Icon name="Calculator" className="mr-2 text-heating-orange" />
-                  Калькулятор труб отопления
-                </CardTitle>
-                <CardDescription>
-                  Рассчитайте необходимую длину и диаметр труб для вашей системы отопления
-                </CardDescription>
-              </CardHeader>
+            {/* Calculators Cards */}
+            <div className="space-y-6">
+              {/* Pipes Calculator */}
+              <Card className="animate-scale-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Icon name="Calculator" className="mr-2 text-heating-orange" />
+                    Калькулятор труб отопления
+                  </CardTitle>
+                  <CardDescription>
+                    Рассчитайте необходимую длину и диаметр труб для вашей системы отопления
+                  </CardDescription>
+                </CardHeader>
               <CardContent>
                 <Tabs defaultValue="basic" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
@@ -205,16 +266,123 @@ function Index() {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-            </Card>
+              </Card>
+
+              {/* Radiators Calculator */}
+              <Card className="animate-scale-in">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Icon name="Thermometer" className="mr-2 text-heating-blue" />
+                    Калькулятор радиаторов отопления
+                  </CardTitle>
+                  <CardDescription>
+                    Определите количество и мощность радиаторов для эффективного отопления
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="radiatorRoomArea">Площадь помещения (м²)</Label>
+                        <Input
+                          id="radiatorRoomArea"
+                          type="number"
+                          placeholder="25"
+                          value={radiatorData.roomArea}
+                          onChange={(e) => setRadiatorData({...radiatorData, roomArea: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="radiatorCeilingHeight">Высота потолков (м)</Label>
+                        <Input
+                          id="radiatorCeilingHeight"
+                          type="number"
+                          placeholder="2.7"
+                          value={radiatorData.ceilingHeight}
+                          onChange={(e) => setRadiatorData({...radiatorData, ceilingHeight: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="wallCount">Внешние стены</Label>
+                        <Input
+                          id="wallCount"
+                          type="number"
+                          placeholder="2"
+                          value={radiatorData.wallCount}
+                          onChange={(e) => setRadiatorData({...radiatorData, wallCount: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="windowCount">Окна (шт.)</Label>
+                        <Input
+                          id="windowCount"
+                          type="number"
+                          placeholder="2"
+                          value={radiatorData.windowCount}
+                          onChange={(e) => setRadiatorData({...radiatorData, windowCount: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="doorCount">Двери (шт.)</Label>
+                        <Input
+                          id="doorCount"
+                          type="number"
+                          placeholder="1"
+                          value={radiatorData.doorCount}
+                          onChange={(e) => setRadiatorData({...radiatorData, doorCount: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Уровень утепления</Label>
+                      <div className="flex gap-2 mt-2">
+                        {[
+                          { value: 'poor', label: 'Слабое', color: 'bg-red-100 text-red-800' },
+                          { value: 'medium', label: 'Среднее', color: 'bg-yellow-100 text-yellow-800' },
+                          { value: 'good', label: 'Хорошее', color: 'bg-green-100 text-green-800' }
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => setRadiatorData({...radiatorData, insulationLevel: option.value})}
+                            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                              radiatorData.insulationLevel === option.value
+                                ? option.color
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      onClick={calculateRadiators}
+                      className="w-full bg-heating-blue hover:bg-blue-700"
+                    >
+                      <Icon name="Thermometer" size={16} className="mr-2" />
+                      Рассчитать радиаторы
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Results Card */}
+            {/* Results Cards */}
             {results.totalPipeLength > 0 && (
               <Card className="animate-fade-in">
                 <CardHeader>
-                  <CardTitle className="text-heating-blue">Результаты расчета</CardTitle>
+                  <CardTitle className="text-heating-orange flex items-center">
+                    <Icon name="Calculator" className="mr-2" size={18} />
+                    Трубы отопления
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -241,10 +409,43 @@ function Index() {
               </Card>
             )}
 
+            {radiatorResults.radiatorCount > 0 && (
+              <Card className="animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="text-heating-blue flex items-center">
+                    <Icon name="Thermometer" className="mr-2" size={18} />
+                    Радиаторы отопления
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Секции:</span>
+                    <Badge variant="outline" className="text-heating-blue font-semibold">
+                      {radiatorResults.radiatorCount} шт
+                    </Badge>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Мощность:</span>
+                    <Badge variant="outline" className="text-heating-orange font-semibold">
+                      {radiatorResults.totalPower} Вт
+                    </Badge>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Стоимость:</span>
+                    <Badge className="bg-green-500 font-semibold">
+                      {radiatorResults.radiatorCost.toLocaleString()} ₽
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Services Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-heading-blue flex items-center">
+                <CardTitle className="text-heating-blue flex items-center">
                   <Icon name="Wrench" className="mr-2" />
                   Наши услуги
                 </CardTitle>
